@@ -1,5 +1,3 @@
-# React-Hooks
-
 ## React Hooks
 
 ![](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/ee08e3abecda4bd181184c6b6690ee6c~tplv-k3u1fbpfcp-watermark.image)
@@ -354,6 +352,165 @@ useLayoutEffect里的任务最后影响了Layout；
 读取：count.current;</br>
 为了保证两次useRef是同一个值，所以需要current;</br>
 
+在函数组件中使用`String Ref、Callback Ref/Create Ref`会抛出以下错误：
+
+`Uncaught Invariant Violation: Function components cannot have refs. Did you mean to use React.forwardRef()?`
+
+这是因为函数组件没有实例，所以函数组件无法使用`String Ref、Callback Ref、Create Ref`,取而代之的是useRef.
+
+**useRef的作用：**
+
+获取DOM元素的节点；</br>
+获取子组件的实例；</br>
+渲染周期之间共享数据的存储(state不能存储跨渲染周期的数据，因为state的保存会触发组件重渲染)；
+
+**获取DOM元素的节点**
+```
+import React, { useEffect, useRef } from 'react';
+function App() {
+  const h1Ref = useRef();
+  useEffect(() => {
+    console.log('useRef')
+    console.log(h1Ref.current)
+  }, [])
+  return <h1 ref={h1Ref}>Hello World!</h1>
+}
+export default App;
+
+//打印结果：
+useRef
+   <h1>Hello World!</h1>
+```
+
+**获取子组件的实例；**
+
+**渲染周期之间共享数据的存储**
+
+#### forwarsRef
+
+**props无法传递ref属性：**
+
+```
+import React, { useRef } from "react";
+import ReactDOM from "react-dom";
+
+import "./styles.css";
+
+function App() {
+  const buttonRef = useRef(null);
+  return (
+    <div className="App">
+      <Button2 ref={buttonRef}>按钮</Button2>
+      {/* 看浏览器控制台的报错 */}
+    </div>
+  );
+}
+
+const Button2 = props => {
+  return <button className="red" {...props} />;
+};
+
+const rootElement = document.getElementById("root");
+ReactDOM.render(<App />, rootElement);
+
+```
+
+**实现ref的传递：**
+
+```
+import React, { useRef } from "react";
+import ReactDOM from "react-dom";
+
+import "./styles.css";
+
+function App() {
+  const buttonRef = useRef(null);
+  return (
+    <div className="App">
+      <Button3 ref={buttonRef}>按钮</Button3>
+    </div>
+  );
+}
+
+const Button3 = React.forwardRef((props, ref) => {
+  return <button className="red" ref={ref} {...props} />;
+});
+
+const rootElement = document.getElementById("root");
+ReactDOM.render(<App />, rootElement);
+
+```
+
+**两次ref传递得到button的引用：**
+
+```
+import React, { useRef, useState, useEffect } from "react";
+import ReactDOM from "react-dom";
+
+import "./styles.css";
+
+function App() {
+  const MovableButton = movable(Button2);
+  const buttonRef = useRef(null);
+  useEffect(() => {
+    console.log(buttonRef.curent);
+  });
+  return (
+    <div className="App">
+      <MovableButton name="email" ref={buttonRef}>
+        按钮
+      </MovableButton>
+    </div>
+  );
+}
+
+// function Button2(props) {
+//   return <button {...props} />;
+// }
+
+const Button2 = React.forwardRef((props, ref) => {
+  return <button ref={ref} {...props} />;
+});
+
+// 仅用于实验目的，不要在公司代码中使用
+function movable(Component) {
+  function Component2(props, ref) {
+    console.log(props, ref);
+    const [position, setPosition] = useState([0, 0]);
+    const lastPosition = useRef(null);
+    const onMouseDown = e => {
+      lastPosition.current = [e.clientX, e.clientY];
+    };
+    const onMouseMove = e => {
+      if (lastPosition.current) {
+        const x = e.clientX - lastPosition.current[0];
+        const y = e.clientY - lastPosition.current[1];
+        setPosition([position[0] + x, position[1] + y]);
+        lastPosition.current = [e.clientX, e.clientY];
+      }
+    };
+    const onMouseUp = () => {
+      lastPosition.current = null;
+    };
+    return (
+      <div
+        className="movable"
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        style={{ left: position && position[0], top: position && position[1] }}
+      >
+        <Component {...props} ref={ref} />
+      </div>
+    );
+  }
+  return React.forwardRef(Component2);
+}
+
+const rootElement = document.getElementById("root");
+ReactDOM.render(<App />, rootElement);
+
+```
 
 #### 尝试实现React.useState
 
@@ -404,40 +561,6 @@ ReactDOM.render(<App />, rootElement);
 对应的所有state都会出现[分身]；</br>
 如果不希望出现分身，可以用useRef/useContext。</br>
 
-#### React Hooks系列 - useRef
-
-在函数组件中使用`String Ref、Callback Ref/Create Ref`会抛出以下错误：
-
-`Uncaught Invariant Violation: Function components cannot have refs. Did you mean to use React.forwardRef()?`
-
-这是因为函数组件没有实例，所以函数组件无法使用`String Ref、Callback Ref、Create Ref`,取而代之的是useRef.
-
-**useRef的作用：**
-
-获取DOM元素的节点；</br>
-获取子组件的实例；</br>
-渲染周期之间共享数据的存储(state不能存储跨渲染周期的数据，因为state的保存会触发组件重渲染)；
-
-**获取DOM元素的节点**
-```
-import React, { useEffect, useRef } from 'react';
-function App() {
-  const h1Ref = useRef();
-  useEffect(() => {
-    console.log('useRef')
-    console.log(h1Ref.current)
-  }, [])
-  return <h1 ref={h1Ref}>Hello World!</h1>
-}
-export default App;
-
-//打印结果：
-useRef
-   <h1>Hello World!</h1>
-```
-
-**获取子组件的实例；**
-
-**渲染周期之间共享数据的存储**
 
 
+![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/7c2ea7fa75474b639e9cd27fa4db2bf4~tplv-k3u1fbpfcp-watermark.image)
